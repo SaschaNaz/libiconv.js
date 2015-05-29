@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <script src="../lib/libiconv.js" async onload="loadHelper()"></script>
+    <script>
+    function loadHelper() {
+      var script = document.createElement("script");
+      script.src = "../src/helper.js";
+      script.onload = test;
+      document.head.appendChild(script);
+    }
+    
+    function test() {
+      var output = libiconv.convert(new Uint8Array([0xac, 0x20, 0x53, 0x01]), "utf-16le", "iso-8859-15");
+      console.log(output.length);
+      console.log(output);
+      console.log(Module.intArrayToString(output));
+    }
+    </script>
+</head>
+<body>
+
+</body>
+</html>
