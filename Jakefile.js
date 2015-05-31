@@ -4,21 +4,17 @@ var cc = "emcc";
 var iconvSource = "deps/libiconv/lib/iconv.c";
 var iconvInclude = "-I support";
 var iconvHelperDir = "src";
-var iconvFlags = iconvInclude + " -D ICONV_CONST=const";
+var iconvDefinitions = "-D ICONV_CONST=const -D LIBICONV_PLUG=1";
+var iconvExportedFunctions = "-s EXPORTED_FUNCTIONS=['_iconv_open','_iconv','_iconv_close']";
+var iconvCommonParameters = iconvSource + " " + iconvExportedFunctions + " " + iconvInclude + " " + iconvDefinitions;
 var jakeExecOptionBag = {
     printStdout: true,
-    printStderr: true
+    printStderr: true,
+    breakOnError: true
 };
 var jakeAsyncTaskOptionBag = {
     async: true
 };
-desc("Compile libiconv with Emscripten");
-task("libiconv", function () {
-    // --post-js src/helper.js
-    jake.exec([(cc + " -o lib/libiconv.js " + iconvSource + " -s EXPORTED_FUNCTIONS=['_iconv_open','_iconv','_iconv_close'] " + iconvFlags)], jakeExecOptionBag, function () {
-        complete();
-    });
-}, jakeAsyncTaskOptionBag);
 desc("Compile helper script");
 task("helper", function () {
     process.chdir(iconvHelperDir);
@@ -27,6 +23,22 @@ task("helper", function () {
         complete();
     });
 }, jakeAsyncTaskOptionBag);
+desc("Compile libiconv with Emscripten, with helper.js separated");
+task("libiconv-base", function () {
+    // --post-js src/helper.js
+    jake.exec([(cc + " -o lib/libiconv-base.js " + iconvCommonParameters)], jakeExecOptionBag, function () {
+        complete();
+    });
+}, jakeAsyncTaskOptionBag);
+desc("Compile libiconv with Emscripten");
+task("libiconv", function () {
+    jake.exec([(cc + " --post-js src/helper.js -o lib/libiconv.js " + iconvCommonParameters)], jakeExecOptionBag, function () {
+        complete();
+    });
+}, jakeAsyncTaskOptionBag);
+desc("Builds libiconv.js, with helper.js separated");
+task("base", ["helper", "libiconv-base"], function () {
+});
 desc("Builds libiconv.js");
-task("default", ["libiconv", "helper"], function () {
+task("default", ["helper", "libiconv"], function () {
 });
