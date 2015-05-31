@@ -4,11 +4,11 @@
 import fs = require("fs");
 
 let cc = "emcc";
-let iconvSource = "deps/libiconv/lib/iconv.c";
+let iconvSource = "deps/libiconv/lib/iconv.c src/helper.c";
 let iconvInclude = "-I support";
 let iconvHelperDir = "src";
 let iconvDefinitions = "-D ICONV_CONST=const -D LIBICONV_PLUG=1";
-let iconvExportedFunctions = "-s EXPORTED_FUNCTIONS=['_iconv_open','_iconv','_iconv_close']";
+let iconvExportedFunctions = "-s EXPORTED_FUNCTIONS=['_iconv_open','_iconv','_iconv_close','_get_errno']";
 
 let iconvCommonParameters = `${iconvSource} ${iconvExportedFunctions} ${iconvInclude} ${iconvDefinitions}`;
 

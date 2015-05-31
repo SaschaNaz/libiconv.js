@@ -1,4 +1,10 @@
 module libiconv {
+    const enum Errno {
+        E2BIG = 7,
+        EILSEQ = 84,
+        EINVAL = 22
+    }
+
     function allocateUint8Array(input: Uint8Array) {
         let pointer = Module._malloc(input.length);
         Module.HEAPU8.set(input, pointer);
@@ -15,6 +21,7 @@ module libiconv {
         <(pIconv: number, ppInput: number, pInputLeft: number, ppOutput: number, pOutputLeft: number) => number>
         ("iconv", "number", ["number", "number", "number", "number", "number"]);
     let iconvClose = Module.cwrap<(pIconv: number) => number>("iconv_close", "number", ["number"]);
+    let getErrno = Module.cwrap<() => number>("get_errno", "number", []);
 
     export function convert(input: Uint8Array, fromCode: string, toCode: string) {
         let outputReservedLength = input.length * 4;
@@ -29,13 +36,31 @@ module libiconv {
 
         let pIconv = iconvOpen(toCode, fromCode);
         let resultCode = iconv(pIconv, ppInput, pInputLeft, ppOutput, pOutputLeft);
-        console.log(resultCode);
         iconvClose(pIconv);
 
         let output = Module.HEAPU8.slice(pOutput, pOutput + outputReservedLength - Module.getValue(pOutputLeft, "i32"));
 
         for (let pointer of [pInput, pOutput, ppInput, ppOutput, pInputLeft, pOutputLeft])
             Module._free(pointer);
+
+        if (resultCode === -1) {
+            let errMessage: string;
+            switch (getErrno()) {
+                case Errno.E2BIG:
+                    errMessage = "Need more space. Please contact dev when this happens.";
+                    break;
+                case Errno.EILSEQ:
+                    errMessage = "Illegal character sequence.";
+                    break;
+                case Errno.EINVAL:
+                    errMessage = "Incomplete character sequence.";
+                    break;
+                default:
+                    errMessage = "Unknown error";
+                    break;
+            }
+            throw new Error(`libiconv.js: ${errMessage}`);
+        }
         return output;
     }
 }
