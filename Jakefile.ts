@@ -9,8 +9,10 @@ let iconvInclude = "-I support";
 let iconvHelperDir = "src";
 let iconvDefinitions = "-D ICONV_CONST=const -D LIBICONV_PLUG=1";
 let iconvExportedFunctions = "-s EXPORTED_FUNCTIONS=['_iconv_open','_iconv','_iconv_close','_get_errno']";
+let iconvCompilingOptions = "-O2 --memory-init-file 0";
 
-let iconvCommonParameters = `${iconvSource} ${iconvExportedFunctions} ${iconvInclude} ${iconvDefinitions}`;
+let iconvCommonParameters
+    = `${iconvCompilingOptions} ${iconvSource} ${iconvExportedFunctions} ${iconvInclude} ${iconvDefinitions}`;
 
 let jakeExecOptionBag: jake.ExecOptions = {
     printStdout: true,

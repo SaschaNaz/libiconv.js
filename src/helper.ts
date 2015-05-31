@@ -1,4 +1,4 @@
-module libiconv {
+namespace libiconv {
     const enum Errno {
         E2BIG = 7,
         EILSEQ = 84,
@@ -24,48 +24,65 @@ module libiconv {
     let getErrno = Module.cwrap<() => number>("get_errno", "number", []);
 
     export function convert(input: Uint8Array, fromCode: string, toCode: string) {
-        let outputReservedLength = input.length * 4;
+        let iconv = new Iconv(fromCode, toCode);
+        let result = iconv.convert(input);
+        iconv.close();
+        return result;
+    }
 
-        let pInput = allocateUint8Array(input);
-        let pOutput = Module._malloc(outputReservedLength);
-        let ppInput = allocateInt32(pInput);
-        let ppOutput = allocateInt32(pOutput);
+    export class Iconv {
+        private _pIconv: number;
 
-        let pInputLeft = allocateInt32(input.length);
-        let pOutputLeft = allocateInt32(outputReservedLength);
-
-        let pIconv = iconvOpen(toCode, fromCode);
-        let resultCode = iconv(pIconv, ppInput, pInputLeft, ppOutput, pOutputLeft);
-        iconvClose(pIconv);
-
-        let output = Module.HEAPU8.slice(pOutput, pOutput + outputReservedLength - Module.getValue(pOutputLeft, "i32"));
-
-        for (let pointer of [pInput, pOutput, ppInput, ppOutput, pInputLeft, pOutputLeft])
-            Module._free(pointer);
-
-        if (resultCode === -1) {
-            let errMessage: string;
-            switch (getErrno()) {
-                case Errno.E2BIG:
-                    errMessage = "Need more space. Please contact dev when this happens.";
-                    break;
-                case Errno.EILSEQ:
-                    errMessage = "Illegal character sequence.";
-                    break;
-                case Errno.EINVAL:
-                    errMessage = "Incomplete character sequence.";
-                    break;
-                default:
-                    errMessage = "Unknown error";
-                    break;
-            }
-            throw new Error(`libiconv.js: ${errMessage}`);
+        constructor(public fromCode: string, public toCode: string) {
+            this._pIconv = iconvOpen(toCode, fromCode); // Note: The order should always be reversed!
         }
-        return output;
+
+        convert(input: Uint8Array) {
+            let outputReservedLength = input.length * 4;
+
+            let pInput = allocateUint8Array(input);
+            let pOutput = Module._malloc(outputReservedLength);
+            let ppInput = allocateInt32(pInput);
+            let ppOutput = allocateInt32(pOutput);
+
+            let pInputLeft = allocateInt32(input.length);
+            let pOutputLeft = allocateInt32(outputReservedLength);
+
+            let resultCode = iconv(this._pIconv, ppInput, pInputLeft, ppOutput, pOutputLeft);
+
+            let output = Module.HEAPU8.slice(pOutput, pOutput + outputReservedLength - Module.getValue(pOutputLeft, "i32"));
+
+            for (let pointer of [pInput, pOutput, ppInput, ppOutput, pInputLeft, pOutputLeft])
+                Module._free(pointer);
+
+            if (resultCode === -1) {
+                let errMessage: string;
+                switch (getErrno()) {
+                    case Errno.E2BIG:
+                        errMessage = "Need more space. Please contact dev when this happens.";
+                        break;
+                    case Errno.EILSEQ:
+                        errMessage = "Illegal character sequence.";
+                        break;
+                    case Errno.EINVAL:
+                        errMessage = "Incomplete character sequence.";
+                        break;
+                    default:
+                        errMessage = "Unknown error";
+                        break;
+                }
+                throw new Error(`libiconv.js: ${errMessage}`);
+            }
+            return output;
+        }
+
+        close() {
+            iconvClose(this._pIconv);
+        }
     }
 }
 
-declare module Module {
+declare namespace Module {
     function intArrayFromString(stringy: string, dontAddNull?: boolean, length?: number): number[];
     function intArrayToString(array: number[]|Uint8Array): string;
     function setValue(pointer: number, value: number, type: string): void;

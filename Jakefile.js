@@ -6,7 +6,8 @@ var iconvInclude = "-I support";
 var iconvHelperDir = "src";
 var iconvDefinitions = "-D ICONV_CONST=const -D LIBICONV_PLUG=1";
 var iconvExportedFunctions = "-s EXPORTED_FUNCTIONS=['_iconv_open','_iconv','_iconv_close','_get_errno']";
-var iconvCommonParameters = iconvSource + " " + iconvExportedFunctions + " " + iconvInclude + " " + iconvDefinitions;
+var iconvCompilingOptions = "-O2 --memory-init-file 0";
+var iconvCommonParameters = iconvCompilingOptions + " " + iconvSource + " " + iconvExportedFunctions + " " + iconvInclude + " " + iconvDefinitions;
 var jakeExecOptionBag = {
     printStdout: true,
     printStderr: true,
