@@ -1,8 +1,11 @@
 namespace libiconv {
-    const enum Errno {
+    export enum Errno {
         E2BIG = 7,
         EILSEQ = 84,
         EINVAL = 22
+    }
+    export interface IconvError extends Error {
+        code: string;
     }
 
     function allocateUint8Array(input: Uint8Array) {
@@ -57,7 +60,8 @@ namespace libiconv {
 
             if (resultCode === -1) {
                 let errMessage: string;
-                switch (getErrno()) {
+                let errno = getErrno();
+                switch (errno) {
                     case Errno.E2BIG:
                         errMessage = "Need more space. Please contact dev when this happens.";
                         break;
@@ -71,7 +75,10 @@ namespace libiconv {
                         errMessage = "Unknown error";
                         break;
                 }
-                throw new Error(`libiconv.js: ${errMessage}`);
+                let error = <IconvError>new Error(`libiconv.js: ${errMessage}`);
+                error.name = "IconvError";
+                error.code = Errno[errno];
+                throw error;
             }
             return output;
         }

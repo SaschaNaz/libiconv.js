@@ -1,5 +1,11 @@
 var libiconv;
 (function (libiconv) {
+    (function (Errno) {
+        Errno[Errno["E2BIG"] = 7] = "E2BIG";
+        Errno[Errno["EILSEQ"] = 84] = "EILSEQ";
+        Errno[Errno["EINVAL"] = 22] = "EINVAL";
+    })(libiconv.Errno || (libiconv.Errno = {}));
+    var Errno = libiconv.Errno;
     function allocateUint8Array(input) {
         var pointer = Module._malloc(input.length);
         Module.HEAPU8.set(input, pointer);
@@ -43,21 +49,25 @@ var libiconv;
             }
             if (resultCode === -1) {
                 var errMessage;
-                switch (getErrno()) {
-                    case 7 /* E2BIG */:
+                var errno = getErrno();
+                switch (errno) {
+                    case Errno.E2BIG:
                         errMessage = "Need more space. Please contact dev when this happens.";
                         break;
-                    case 84 /* EILSEQ */:
+                    case Errno.EILSEQ:
                         errMessage = "Illegal character sequence.";
                         break;
-                    case 22 /* EINVAL */:
+                    case Errno.EINVAL:
                         errMessage = "Incomplete character sequence.";
                         break;
                     default:
                         errMessage = "Unknown error";
                         break;
                 }
-                throw new Error("libiconv.js: " + errMessage);
+                var error = new Error("libiconv.js: " + errMessage);
+                error.name = "IconvError";
+                error.code = Errno[errno];
+                throw error;
             }
             return output;
         };
